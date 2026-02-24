@@ -103,7 +103,7 @@ def read_account(account_id: int):
 def update_account(account_id: int):
     """ Updates an account """
     app.logger.info("Request to update an account")
-    check_content_type(HEADER_CONTENT_TYPE)
+    check_content_type("application/json")
     account = Account.find(account_id)
     if account is None:
         app.logger.info("Unknown ID %s.", account_id)
