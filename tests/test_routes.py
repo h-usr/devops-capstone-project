@@ -19,7 +19,6 @@ DATABASE_URI = os.getenv(
 
 BASE_URL = "/accounts"
 
-
 ######################################################################
 #  T E S T   C A S E S
 ######################################################################
@@ -123,4 +122,96 @@ class TestAccountService(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
 
-    # ADD YOUR TEST CASES HERE ...
+    def test_read_an_account(self):
+        """Read: It should return account with given ID"""
+        account = self._create_accounts(1)[0]
+        response = self.client.get(f"{BASE_URL}/{account.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        read_account = response.get_json()
+        self.assertEqual(read_account["id"], account.id)
+
+    def test_read_account_not_found(self):
+        """Read: It should return error status """
+        invalid_account_id = 0
+        response = self.client.get(f"{BASE_URL}/{invalid_account_id}")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_update_an_account(self):
+        """Update: It should update given account"""
+        account = self._create_accounts(1)[0]
+        updated_data = {
+            "name": "Pietro Pacciani",
+            "email": "vampa@hotmail.com",
+            "address": "Mercatale",
+            "phone_number": "+666",
+            "date_joined": "2026-02-24"
+        }
+        account.deserialize(updated_data)
+        response = self.client.put(f"{BASE_URL}/{account.id}", json=account.serialize())
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_json = response.get_json()
+        updated_account = Account().deserialize(response_json)
+        updated_account.id = response_json["id"]
+        self.assertEqual(updated_account.id, account.id)
+        self.assertEqual(updated_account.name, account.name)
+        self.assertEqual(updated_account.email, account.email)
+        self.assertEqual(updated_account.address, account.address)
+        self.assertEqual(updated_account.phone_number, account.phone_number)
+        self.assertEqual(updated_account.date_joined, account.date_joined)
+
+    def test_update_account_not_found(self):
+        """Update: It should return error when no account found"""
+        invalid_account_id = 0
+        updated_data = {}
+        response = self.client.put(f"{BASE_URL}/{invalid_account_id}", json=updated_data)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_update_account_bad_request(self):
+        """Update: It should not update an account when sending wrong data"""
+        account = self._create_accounts(1)[0]
+        response = self.client.put(
+            f"{BASE_URL}/{account.id}",
+            json={"name": "Piatro Peccieni"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_update_account_unsupported_media_type(self):
+        """Update: It should not update an account when sending the wrong media type"""
+        account = AccountFactory()
+        response = self.client.put(
+            f"{BASE_URL}/{account.id}",
+            json=account.serialize(),
+            content_type="test/html"
+        )
+        self.assertEqual(response.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+
+    def test_delete_account(self):
+        """Delete: It should delete given account"""
+        account = self._create_accounts(1)[0]
+        response = self.client.delete(
+            f"{BASE_URL}/{account.id}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.get_data(as_text=True), "")
+        self.assertEqual(Account.find(account.id), None)
+
+    def test_delete_account_not_found(self):
+        """Delete: It should return error status when deleting invalid account"""
+        invalid_account_id = 0
+        response = self.client.delete(f"{BASE_URL}/{invalid_account_id}")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_list_all_accounts(self):
+        """List: It should List all known accounts"""
+        account_count = 5
+        self._create_accounts(account_count)
+        response = self.client.get(f"{BASE_URL}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.get_json()
+        self.assertEqual(len(response_data), account_count)
+
+    def test_list_all_accounts_no_products_found(self):
+        """List: It should return success even when no account could be found"""
+        response = self.client.get(f"{BASE_URL}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.get_json()), 0)
