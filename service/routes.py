@@ -43,7 +43,7 @@ def index():
 @app.route("/accounts", methods=["POST"])
 def create_accounts():
     """
-    Creates an Account
+    Creates an Account1. Next, after the Flask app is created, create an instance of the `Ta
     This endpoint will create an Account based the data in the body that is posted
     """
     app.logger.info("Request to create an Account")
